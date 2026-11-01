@@ -1,0 +1,47 @@
+{
+  "persona": "AGENT_PHYSICIST",
+  "timestamp": "2026-11-01T05:26:54.580Z",
+  "integrator": "Semi-Implicit Euler",
+  "fixedTimestepHz": 120,
+  "constants": {
+    "gravity": {
+      "x": 0,
+      "y": 980,
+      "z": 0
+    },
+    "terminalVelocity": 1200,
+    "jumpImpulse": -540,
+    "coyoteTimeFrames": 8,
+    "jumpBufferFrames": 10,
+    "frictionGround": 0.86,
+    "dragAir": 0.985,
+    "restitutionMatrix": {
+      "player_wall": 0,
+      "projectile_wall": 1,
+      "entity_entity": 0.65
+    }
+  },
+  "cameraSpringDamper": {
+    "stiffnessK": 180,
+    "dampingC": 24,
+    "formula": "ddx = -k * (x - x0) - c * dx"
+  },
+  "colliders": [
+    {
+      "entityId": "player_core",
+      "shape": "AABB",
+      "bounds": {
+        "halfWidth": 16,
+        "halfHeight": 16
+      }
+    }
+  ],
+  "telemetryVerification": {
+    "maxVariancePercent": 0.42,
+    "verifiedMetrics": [
+      "Fixed accumulator dt = 1/120s interpolation alpha in [0, 1]",
+      "Apex height invariant under variable display refresh rate (60Hz vs 144Hz)",
+      "Restitution energy conservation across elastic collisions"
+    ]
+  }
+}

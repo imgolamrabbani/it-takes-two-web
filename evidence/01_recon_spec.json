@@ -1,0 +1,171 @@
+{
+  "persona": "AGENT_RECON",
+  "timestamp": "2026-11-01T05:26:54.577Z",
+  "target": {
+    "name": "It Takes Two",
+    "slug": "it-takes-two",
+    "dimension": "2D",
+    "genre": "Arcade / Action Simulation"
+  },
+  "stateMachine": {
+    "initialState": "BOOT",
+    "states": [
+      "BOOT",
+      "TITLE",
+      "SETTINGS",
+      "TUTORIAL",
+      "PLAYING",
+      "PAUSED",
+      "STAGE_CLEAR",
+      "BOSS_ENCOUNTER",
+      "GAME_OVER",
+      "VICTORY"
+    ],
+    "transitions": [
+      {
+        "from": "BOOT",
+        "to": "TITLE",
+        "trigger": "ASSETS_SYNTHESIZED"
+      },
+      {
+        "from": "TITLE",
+        "to": "PLAYING",
+        "trigger": "START_GAME"
+      },
+      {
+        "from": "TITLE",
+        "to": "SETTINGS",
+        "trigger": "OPEN_SETTINGS"
+      },
+      {
+        "from": "SETTINGS",
+        "to": "TITLE",
+        "trigger": "CLOSE_SETTINGS"
+      },
+      {
+        "from": "PLAYING",
+        "to": "PAUSED",
+        "trigger": "TOGGLE_PAUSE"
+      },
+      {
+        "from": "PAUSED",
+        "to": "PLAYING",
+        "trigger": "TOGGLE_PAUSE"
+      },
+      {
+        "from": "PLAYING",
+        "to": "STAGE_CLEAR",
+        "trigger": "OBJECTIVES_MET"
+      },
+      {
+        "from": "STAGE_CLEAR",
+        "to": "PLAYING",
+        "trigger": "NEXT_STAGE"
+      },
+      {
+        "from": "STAGE_CLEAR",
+        "to": "BOSS_ENCOUNTER",
+        "trigger": "FINAL_STAGE_REACHED"
+      },
+      {
+        "from": "PLAYING",
+        "to": "GAME_OVER",
+        "trigger": "PLAYER_DEPLETED"
+      },
+      {
+        "from": "BOSS_ENCOUNTER",
+        "to": "VICTORY",
+        "trigger": "BOSS_DEFEATED"
+      },
+      {
+        "from": "GAME_OVER",
+        "to": "PLAYING",
+        "trigger": "RETRY_STAGE"
+      }
+    ]
+  },
+  "entities": [
+    {
+      "id": "player_core",
+      "category": "player",
+      "dimensions": {
+        "width": 32,
+        "height": 32
+      },
+      "states": [
+        "IDLE",
+        "MOVING",
+        "DASHING",
+        "ATTACKING",
+        "HIT_STUN",
+        "INVULNERABLE"
+      ],
+      "properties": {
+        "maxHp": 100,
+        "speedPxPerSec": 320,
+        "dashMultiplier": 2.4
+      }
+    }
+  ],
+  "inputMappings": {
+    "MOVE_LEFT": [
+      "ArrowLeft",
+      "KeyA",
+      "Gamepad:DPadLeft"
+    ],
+    "MOVE_RIGHT": [
+      "ArrowRight",
+      "KeyD",
+      "Gamepad:DPadRight"
+    ],
+    "MOVE_UP": [
+      "ArrowUp",
+      "KeyW",
+      "Gamepad:DPadUp"
+    ],
+    "MOVE_DOWN": [
+      "ArrowDown",
+      "KeyS",
+      "Gamepad:DPadDown"
+    ],
+    "PRIMARY_ACTION": [
+      "Space",
+      "KeyZ",
+      "MouseLeft",
+      "Gamepad:ButtonSouth"
+    ],
+    "SECONDARY_ACTION": [
+      "ShiftLeft",
+      "KeyX",
+      "MouseRight",
+      "Gamepad:ButtonWest"
+    ],
+    "PAUSE": [
+      "Escape",
+      "KeyP",
+      "Gamepad:Start"
+    ],
+    "DEBUG_OVERLAY": [
+      "Backquote",
+      "F3"
+    ]
+  },
+  "progression": {
+    "stages": 5,
+    "winCondition": "Clear all stage waves and defeat the stage guardian.",
+    "loseCondition": "Hull/Health integrity drops to 0.",
+    "scoringRules": {
+      "baseKill": 100,
+      "comboMultiplierMax": 8,
+      "flawlessStageBonus": 2500
+    }
+  },
+  "loreAndTheme": {
+    "setting": "Clean-room procedural reconstruction of It Takes Two",
+    "narrativeBeats": [
+      "Phase 1: System Awakening & Telemetry Calibration",
+      "Phase 2: Escalating Kinetic Sector Defense",
+      "Phase 3: Core Guardian Showdown"
+    ]
+  }
+}

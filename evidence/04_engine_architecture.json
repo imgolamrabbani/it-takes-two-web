@@ -1,0 +1,24 @@
+{
+  "persona": "AGENT_ENGINE",
+  "timestamp": "2026-11-01T05:26:54.582Z",
+  "selection": {
+    "template": "2d-vite-phaser-ecs",
+    "stack": [
+      "TypeScript",
+      "Vite",
+      "Phaser 3 / Custom Deterministic Canvas2D+WebGL",
+      "Deterministic AABB/SAT Solver",
+      "bitECS",
+      "WebAudio Synth"
+    ]
+  },
+  "fixedTimestepHz": 120,
+  "palette": {
+    "background": "#070913",
+    "primary": "#00f5d4",
+    "secondary": "#7b2cbf",
+    "accent": "#fee440",
+    "danger": "#ff2a85",
+    "uiSurface": "#11162b"
+  }
+}

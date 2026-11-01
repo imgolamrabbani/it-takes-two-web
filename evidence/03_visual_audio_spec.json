@@ -1,0 +1,99 @@
+{
+  "persona": "AGENT_VISUAL",
+  "timestamp": "2026-11-01T05:26:54.580Z",
+  "palette": {
+    "background": "#070913",
+    "primary": "#00f5d4",
+    "secondary": "#7b2cbf",
+    "accent": "#fee440",
+    "danger": "#ff2a85",
+    "uiSurface": "#11162b"
+  },
+  "typography": {
+    "headingFont": "\"Orbitron\", \"JetBrains Mono\", system-ui, sans-serif",
+    "monoFont": "\"JetBrains Mono\", \"Fira Code\", monospace",
+    "scaleRatio": 1.25
+  },
+  "screenShakeTrauma": {
+    "maxAngleRad": 0.08,
+    "maxOffsetPx": 18,
+    "decayPerSecond": 1.8,
+    "formula": "shake = trauma^2 * perlinNoise(t)"
+  },
+  "proceduralShaders": [
+    {
+      "name": "CRTScanlineBloomShader",
+      "purpose": "Subtle retro-futuristic chromatic aberration, vignette, andphosphor glow",
+      "uniforms": [
+        "uTime",
+        "uResolution",
+        "uTrauma",
+        "uChromaticShift"
+      ]
+    },
+    {
+      "name": "SDFEntityGlowShader",
+      "purpose": "Zero-asset signed-distance-field anti-aliased geometry with inner energy pulse",
+      "uniforms": [
+        "uColorPrimary",
+        "uColorAccent",
+        "uPulsePhase",
+        "uHitFlash"
+      ]
+    }
+  ],
+  "synthPatches": [
+    {
+      "id": "sfx_primary_fire",
+      "waveform": "sawtooth",
+      "freqStartHz": 880,
+      "freqEndHz": 180,
+      "durationSec": 0.14,
+      "adsr": {
+        "attack": 0.005,
+        "decay": 0.08,
+        "sustain": 0.2,
+        "release": 0.055
+      }
+    },
+    {
+      "id": "sfx_jump_impulse",
+      "waveform": "square",
+      "freqStartHz": 240,
+      "freqEndHz": 620,
+      "durationSec": 0.16,
+      "adsr": {
+        "attack": 0.008,
+        "decay": 0.09,
+        "sustain": 0.3,
+        "release": 0.06
+      }
+    },
+    {
+      "id": "sfx_impact_explosion",
+      "waveform": "noise",
+      "freqStartHz": 420,
+      "freqEndHz": 55,
+      "durationSec": 0.38,
+      "adsr": {
+        "attack": 0.004,
+        "decay": 0.22,
+        "sustain": 0.15,
+        "release": 0.15
+      }
+    },
+    {
+      "id": "sfx_ui_confirm",
+      "waveform": "triangle",
+      "freqStartHz": 523.25,
+      "freqEndHz": 1046.5,
+      "durationSec": 0.12,
+      "adsr": {
+        "attack": 0.005,
+        "decay": 0.06,
+        "sustain": 0.4,
+        "release": 0.05
+      }
+    }
+  ]
+}

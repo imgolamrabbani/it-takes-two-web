@@ -1,0 +1,38 @@
+{
+  "persona": "AGENT_PLAYER_UX",
+  "timestamp": "2026-11-01T05:32:56.491Z",
+  "passed": false,
+  "fpsStability": 60,
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "juiceChecklist": {
+    "hitStopFrames": true,
+    "directionalScreenShake": true,
+    "particleBurstsOnImpact": true,
+    "proceduralWebAudioSfx": true,
+    "debugOverlayToggleable": true,
+    "remapAndAccessibilitySettings": true
+  },
+  "telemetry": {
+    "state": "PLAYING",
+    "stage": 4,
+    "codyPos": {
+      "x": 160,
+      "y": 554
+    },
+    "mayPos": {
+      "x": 260,
+      "y": 554
+    },
+    "codyNails": 1,
+    "activeNails": 2,
+    "bossHp": 100,
+    "fps": 60.002516234551805
+  },
+  "vetoTickets": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+}

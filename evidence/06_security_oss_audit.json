@@ -1,0 +1,10 @@
+{
+  "persona": "AGENT_SECURITY_OSS",
+  "timestamp": "2026-11-01T05:26:54.582Z",
+  "cleanRoomVerified": true,
+  "license": "MIT",
+  "externalBinaryAssetsCount": 0,
+  "proceduralAssetSynthesis": true,
+  "integrator": "Semi-Implicit Euler",
+  "targetSlug": "it-takes-two"
+}
