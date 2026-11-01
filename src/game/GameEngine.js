@@ -1,13 +1,13 @@
-import { Kinematics } from '../core/physics/Kinematics.js';
+import * as THREE from 'three';
+import { ThreeRenderer } from '../core/rendering/ThreeRenderer.js';
+import { Character3D } from './entities/Character3D.js';
+import { World3D } from './entities/World3D.js';
+import { Weapons3D } from './weapons/Weapons3D.js';
 import { SynthEngine } from '../core/audio/SynthEngine.js';
 import { InputManager } from '../core/input/InputManager.js';
-import { Renderer } from '../core/rendering/Renderer.js';
-import { Player } from './entities/Player.js';
-import { Nail } from './entities/Nail.js';
-import { Level } from './entities/Level.js';
 import { UIManager } from '../ui/UIManager.js';
 export class GameEngine {
-    canvas;
+    scene;
     renderer;
     audio;
     input;
@@ -16,19 +16,16 @@ export class GameEngine {
     currentStageIndex = 1;
     cody;
     may;
-    level;
-    nails = [];
-    particles = [];
-    // Fixed timestep loop
+    world;
+    weapons;
     lastTime = 0;
-    accumulator = 0;
     fps = 60;
     frameCount = 0;
     fpsTimer = 0;
     showDebug = false;
     constructor(canvas, uiRoot) {
-        this.canvas = canvas;
-        this.renderer = new Renderer(canvas);
+        this.scene = new THREE.Scene();
+        this.renderer = new ThreeRenderer(canvas);
         this.audio = new SynthEngine();
         this.input = new InputManager();
         this.ui = new UIManager(uiRoot, {
@@ -56,29 +53,30 @@ export class GameEngine {
                 this.audio.setMusicVolume(music);
             },
         });
-        this.initLevel(1);
-        // Inject automated bot hook for AGENT_PLAYER_UX playtesting
+        this.initStage(1);
+        // Inject automated hook for AGENT_PLAYER_UX playtest audit
         if (typeof window !== 'undefined') {
             window.__GAME_DEBUG__ = {
                 getState: () => ({
                     state: this.state,
                     stage: this.currentStageIndex,
-                    codyPos: { ...this.cody.pos },
-                    mayPos: { ...this.may.pos },
-                    codyNails: this.cody.nailsAvailable,
-                    activeNails: this.nails.length,
-                    bossHp: this.level.boss?.hp,
+                    codyPos: { x: this.cody.pos.x, y: this.cody.pos.y, z: this.cody.pos.z },
+                    mayPos: { x: this.may.pos.x, y: this.may.pos.y, z: this.may.pos.z },
+                    sapGlobsCount: this.weapons.sapGlobs.length,
+                    matchDartsCount: this.weapons.matchDarts.length,
+                    explosionsCount: this.weapons.explosions.length,
+                    bossHp: this.world.boss?.hp,
                     fps: this.fps,
                 }),
                 simulateAction: (action) => {
-                    if (action === 'throwNail') {
-                        const nail = new Nail(Date.now(), this.cody.pos.x + 32, this.cody.pos.y + 16, 750, -100);
-                        this.nails.push(nail);
+                    if (action === 'fireSap') {
+                        const dir = new THREE.Vector3(Math.sin(this.cody.facingAngle), 0.1, Math.cos(this.cody.facingAngle));
+                        this.weapons.fireSap(this.cody.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), dir);
                         this.audio.sfxNailThrow();
                     }
-                    else if (action === 'hammerSmash') {
-                        this.may.isHammerSwinging = true;
-                        this.may.hammerSwingTimer = 0.22;
+                    else if (action === 'fireMatch') {
+                        const dir = new THREE.Vector3(Math.sin(this.may.facingAngle), 0, Math.cos(this.may.facingAngle));
+                        this.weapons.fireMatch(this.may.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), dir);
                         this.audio.sfxHammerSmash();
                     }
                     else if (action === 'advanceStage') {
@@ -88,13 +86,19 @@ export class GameEngine {
             };
         }
     }
-    initLevel(stage) {
+    initStage(stage) {
+        // Clear old scene
+        while (this.scene.children.length > 0) {
+            this.scene.remove(this.scene.children[0]);
+        }
         this.currentStageIndex = stage;
-        this.level = new Level(stage);
-        this.cody = new Player('cody', this.level.codyStart.x, this.level.codyStart.y);
-        this.may = new Player('may', this.level.mayStart.x, this.level.mayStart.y);
-        this.nails = [];
-        this.particles = [];
+        this.world = new World3D(this.scene, stage);
+        this.weapons = new Weapons3D(this.scene);
+        // Spawn Cody & May in 3D
+        this.may = new Character3D('may', new THREE.Vector3(-4, 0, 0));
+        this.cody = new Character3D('cody', new THREE.Vector3(4, 0, 0));
+        this.scene.add(this.may.group);
+        this.scene.add(this.cody.group);
     }
     startStage(stage) {
         if (stage > 4) {
@@ -103,7 +107,7 @@ export class GameEngine {
             this.audio.sfxFanfare();
             return;
         }
-        this.initLevel(stage);
+        this.initStage(stage);
         this.state = 'PLAYING';
         this.ui.setState('PLAYING');
         this.audio.startProceduralMusic();
@@ -115,8 +119,8 @@ export class GameEngine {
     loop(now) {
         const rawDelta = (now - this.lastTime) / 1000;
         this.lastTime = now;
-        const delta = Math.min(rawDelta, 0.1); // clamp spiral of death
-        // Calculate FPS
+        const delta = Math.min(rawDelta, 0.1);
+        // FPS calculation
         this.frameCount++;
         this.fpsTimer += delta;
         if (this.fpsTimer >= 0.5) {
@@ -124,7 +128,7 @@ export class GameEngine {
             this.frameCount = 0;
             this.fpsTimer = 0;
         }
-        // Handle global inputs
+        // Toggle Debug / Pause
         if (this.input.isDebugToggled()) {
             this.showDebug = !this.showDebug;
         }
@@ -138,83 +142,103 @@ export class GameEngine {
                 this.ui.setState('PLAYING');
             }
         }
-        // Fixed timestep accumulator for 120Hz deterministic physics
         if (this.state === 'PLAYING') {
-            this.accumulator += delta;
-            while (this.accumulator >= Kinematics.DT) {
-                this.fixedUpdate(Kinematics.DT);
-                this.accumulator -= Kinematics.DT;
-            }
+            this.updateGame(delta, now / 1000);
         }
-        // Render Frame
-        this.renderer.render({
-            cody: this.cody,
-            may: this.may,
-            nails: this.nails,
-            level: this.level,
-            particles: this.particles,
-            showDebug: this.showDebug,
-            fps: this.fps,
-            gameState: this.state,
-        }, delta);
+        // Render 3D Split-Screen
+        this.renderer.render(this.scene, this.may, this.cody, delta);
         this.input.endFrame();
         requestAnimationFrame((t) => this.loop(t));
     }
-    fixedUpdate(dt) {
+    updateGame(dt, time) {
         const inputs = this.input.getPlayerInputs();
-        // Update Cody
-        const codyRes = this.cody.update(dt, inputs.cody, this.level.colliders, this.nails, this.audio, this.particles, (trauma) => this.renderer.addTrauma(trauma));
-        if (codyRes.spawnedNail) {
-            this.nails.push(codyRes.spawnedNail);
+        // 1. Update Cody Movement & Sap Cannon
+        const codySpeed = 9.5;
+        const codyMoveDir = new THREE.Vector3(inputs.cody.moveX, 0, -inputs.cody.moveY);
+        if (codyMoveDir.lengthSq() > 0.05) {
+            codyMoveDir.normalize();
+            this.cody.pos.addScaledVector(codyMoveDir, codySpeed * dt);
+            this.cody.facingAngle = Math.atan2(codyMoveDir.x, codyMoveDir.z);
+            this.cody.isMoving = true;
         }
-        if (codyRes.recallNails) {
-            for (const n of this.nails) {
-                n.recall();
-            }
+        else {
+            this.cody.isMoving = false;
         }
-        // Update May
-        const mayRes = this.may.update(dt, inputs.may, this.level.colliders, this.nails, this.audio, this.particles, (trauma) => this.renderer.addTrauma(trauma));
-        // Update Nails
-        for (let i = this.nails.length - 1; i >= 0; i--) {
-            const nail = this.nails[i];
-            const stillActive = nail.update(dt, this.level.colliders, this.cody.pos);
-            // Check if nail embeds in moving platform
-            for (const plat of this.level.movingPlatforms) {
-                if (Kinematics.checkAABB(nail.pos.x, nail.pos.y, 4, 4, plat.x, plat.y, plat.w, plat.h)) {
-                    plat.isPinned = true;
-                    nail.isEmbedded = true;
-                    this.audio.sfxNailEmbed();
+        if (inputs.cody.jumpPressed && this.cody.pos.y <= 0.1) {
+            this.cody.vel.y = 8.5;
+            this.cody.isJumping = true;
+            this.audio.sfxJump();
+        }
+        this.cody.vel.y -= 22 * dt;
+        this.cody.pos.y += this.cody.vel.y * dt;
+        if (this.cody.pos.y <= 0) {
+            this.cody.pos.y = 0;
+            this.cody.vel.y = 0;
+            this.cody.isJumping = false;
+        }
+        this.cody.updateAnimation(dt);
+        // Cody Fire Sap
+        if (inputs.cody.action1Pressed) {
+            const dir = new THREE.Vector3(Math.sin(this.cody.facingAngle), 0.15, Math.cos(this.cody.facingAngle));
+            this.weapons.fireSap(this.cody.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), dir);
+            this.audio.sfxNailThrow();
+        }
+        // 2. Update May Movement & Match Rifle
+        const maySpeed = 9.5;
+        const mayMoveDir = new THREE.Vector3(inputs.may.moveX, 0, -inputs.may.moveY);
+        if (mayMoveDir.lengthSq() > 0.05) {
+            mayMoveDir.normalize();
+            this.may.pos.addScaledVector(mayMoveDir, maySpeed * dt);
+            this.may.facingAngle = Math.atan2(mayMoveDir.x, mayMoveDir.z);
+            this.may.isMoving = true;
+        }
+        else {
+            this.may.isMoving = false;
+        }
+        if (inputs.may.jumpPressed && this.may.pos.y <= 0.1) {
+            this.may.vel.y = 8.5;
+            this.may.isJumping = true;
+            this.audio.sfxJump();
+        }
+        this.may.vel.y -= 22 * dt;
+        this.may.pos.y += this.may.vel.y * dt;
+        if (this.may.pos.y <= 0) {
+            this.may.pos.y = 0;
+            this.may.vel.y = 0;
+            this.may.isJumping = false;
+        }
+        this.may.updateAnimation(dt);
+        // May Fire Match Rifle
+        if (inputs.may.action1Pressed) {
+            const dir = new THREE.Vector3(Math.sin(this.may.facingAngle), 0, Math.cos(this.may.facingAngle));
+            this.weapons.fireMatch(this.may.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), dir);
+            this.audio.sfxHammerSwing();
+        }
+        // 3. Update 3D World (gears, pendulum, boss)
+        this.world.update(dt, time);
+        // 4. Update Weapons, Projectiles & Explosions
+        const { detonatedCount } = this.weapons.update(dt, this.world.colliders);
+        if (detonatedCount > 0) {
+            this.audio.sfxHammerSmash();
+            this.renderer.addTrauma(0.55);
+            // Check if explosion damaged the Boss!
+            if (this.world.boss && this.world.boss.hp > 0) {
+                for (const exp of this.weapons.explosions) {
+                    if (exp.pos.distanceTo(this.world.boss.armTargetModule.position.clone().add(this.world.boss.slammingArm.position).add(this.world.boss.group.position)) < 5.0) {
+                        this.world.boss.hp -= 34;
+                        this.audio.sfxBossHit();
+                        this.renderer.addTrauma(0.7);
+                        if (this.world.boss.hp <= 0) {
+                            this.state = 'VICTORY';
+                            this.ui.setState('VICTORY');
+                            this.audio.sfxFanfare();
+                        }
+                    }
                 }
             }
-            // Check if nail hits Boss Arm to pin it!
-            if (this.level.boss && this.level.boss.armState === 'slamming' && this.level.boss.armY > 480) {
-                if (Kinematics.checkAABB(nail.pos.x, nail.pos.y, 4, 4, this.level.boss.armX, this.level.boss.armY, 180, 50)) {
-                    this.level.boss.armState = 'pinned';
-                    this.level.boss.armTimer = 3.5;
-                    nail.isEmbedded = true;
-                    this.audio.sfxNailEmbed();
-                    this.renderer.addTrauma(0.4);
-                }
-            }
-            if (!stillActive) {
-                this.nails.splice(i, 1);
-                this.cody.nailsAvailable = Math.min(this.cody.maxNails, this.cody.nailsAvailable + 1);
-                this.audio.sfxNailRecall();
-            }
         }
-        // Update Level puzzles, switches, doors & boss
-        const levelRes = this.level.update(dt, this.cody.pos, this.may.pos, mayRes.hammerHitbox, this.audio, this.particles, (trauma) => this.renderer.addTrauma(trauma));
-        if (levelRes.stageCompleted) {
-            if (this.currentStageIndex >= 4) {
-                this.state = 'VICTORY';
-                this.ui.setState('VICTORY');
-                this.audio.sfxFanfare();
-            }
-            else {
-                this.state = 'STAGE_CLEAR';
-                this.ui.setState('STAGE_CLEAR');
-                this.audio.sfxFanfare();
-            }
-        }
+    }
+    handleResize(width, height) {
+        this.renderer.resize(width, height);
     }
 }

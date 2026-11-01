@@ -1,0 +1,11 @@
+{
+  "persona": "AGENT_DEVOPS",
+  "timestamp": "2026-11-01T11:34:15.000Z",
+  "gameSlug": "it-takes-two",
+  "githubRepoUrl": "https://github.com/imgolamrabbani/it-takes-two-web",
+  "githubPagesUrl": "https://imgolamrabbani.github.io/it-takes-two-web/",
+  "cloudflarePagesUrl": "https://it-takes-two-web.pages.dev",
+  "cloudflareDeploymentUrl": "https://f7049ae2.it-takes-two-web.pages.dev",
+  "coopCoepVerified": true,
+  "httpStatus": 200
+}

@@ -6,17 +6,16 @@ window.addEventListener('DOMContentLoaded', () => {
         console.error('Failed to find #game-canvas or #ui-root');
         return;
     }
-    // Adjust canvas size for sharp rendering
     function resizeCanvas() {
-        const dpr = window.devicePixelRatio || 1;
-        const targetWidth = 1280;
-        const targetHeight = 720;
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
     }
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
     const engine = new GameEngine(canvas, uiRoot);
+    window.addEventListener('resize', () => {
+        resizeCanvas();
+        engine.handleResize(window.innerWidth, window.innerHeight);
+    });
     engine.start();
-    console.log('🎮 It Takes Two (Clean-Room Reconstruction) initialized successfully.');
+    console.log('🎮 It Takes Two (3D Split-Screen Clean-Room Edition) initialized successfully.');
 });

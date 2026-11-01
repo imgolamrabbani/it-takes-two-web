@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-    <title>It Takes Two: The Shed (Clean-Room Co-op Reconstruction)</title>
+    <title>It Takes Two: 3D Co-op Split-Screen (Clean-Room Edition)</title>
     <style>
       * {
         box-sizing: border-box;
@@ -15,7 +15,7 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background-color: #070913;
+        background-color: #05070c;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
         color: #f1f5f9;
       }
@@ -29,10 +29,63 @@
       }
       canvas {
         display: block;
-        max-width: 100%;
-        max-height: 100%;
-        box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+        width: 100%;
+        height: 100%;
         outline: none;
+      }
+      #split-divider {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(180deg, #3a86ff, #fee440, #2ec4b6);
+        box-shadow: 0 0 16px rgba(254, 228, 64, 0.7);
+        pointer-events: none;
+        transform: translateX(-50%);
+        z-index: 10;
+      }
+      .hud-label {
+        position: absolute;
+        top: 18px;
+        padding: 6px 14px;
+        background: rgba(7, 9, 19, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        z-index: 20;
+        pointer-events: none;
+      }
+      #may-hud {
+        left: 20px;
+        color: #3a86ff;
+        border-color: #3a86ff;
+      }
+      #cody-hud {
+        right: 20px;
+        color: #2ec4b6;
+        border-color: #2ec4b6;
+      }
+      .crosshair {
+        position: absolute;
+        top: 50%;
+        width: 12px;
+        height: 12px;
+        border: 2px solid rgba(255, 255, 255, 0.6);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 15;
+      }
+      #crosshair-may {
+        left: 25%;
+        border-color: #3a86ff;
+      }
+      #crosshair-cody {
+        left: 75%;
+        border-color: #fee440;
       }
       #ui-root {
         position: absolute;
@@ -41,6 +94,7 @@
         width: 100%;
         height: 100%;
         pointer-events: none;
+        z-index: 50;
       }
       .pointer-events-auto {
         pointer-events: auto;
@@ -49,7 +103,12 @@
   </head>
   <body>
     <div id="game-container">
-      <canvas id="game-canvas" width="1280" height="720" tabindex="0"></canvas>
+      <canvas id="game-canvas" tabindex="0"></canvas>
+      <div id="split-divider"></div>
+      <div id="crosshair-may" class="crosshair"></div>
+      <div id="crosshair-cody" class="crosshair"></div>
+      <div id="may-hud" class="hud-label">MAY: Match Rifle [L / M: Fire | Arrows: Move]</div>
+      <div id="cody-hud" class="hud-label">CODY: Sap Cannon [F: Fire Sap | WASD: Move]</div>
       <div id="ui-root"></div>
     </div>
     <script type="module" src="/src/main.ts"></script>
