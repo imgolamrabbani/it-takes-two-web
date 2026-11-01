@@ -1,6 +1,6 @@
 {
   "persona": "AGENT_PLAYER_UX",
-  "timestamp": "2026-11-01T05:41:59.455Z",
+  "timestamp": "2026-11-01T05:47:25.512Z",
   "passed": false,
   "fpsStability": 60,
   "dimension": "3D",
@@ -21,12 +21,12 @@
     "state": "PLAYING",
     "stage": 4,
     "codyPos": {
-      "x": 4,
+      "x": 6,
       "y": 0,
       "z": 0
     },
     "mayPos": {
-      "x": -4,
+      "x": -6,
       "y": 0,
       "z": 0
     },
@@ -34,7 +34,7 @@
     "matchDartsCount": 1,
     "explosionsCount": 0,
     "bossHp": 100,
-    "fps": 60.002516234551805
+    "fps": 60.00251623455173
   },
   "vetoTickets": [
     "Failed to load resource: the server responded with a status of 404 (Not Found)",

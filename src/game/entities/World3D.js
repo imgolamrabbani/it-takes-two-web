@@ -6,44 +6,73 @@ export class World3D {
     gears = [];
     pendulumGroup = null;
     boss = null;
+    dustPoints;
+    dustGeo;
     constructor(scene, stage) {
         this.scene = scene;
-        this.buildLighting();
+        this.buildAtmosphere();
+        this.buildDustParticles();
         if (stage === 1 || stage === 2) {
-            this.buildClockworkStage();
+            this.buildGrandClockworkCathedral();
         }
         else {
             this.buildSapBossArena();
         }
     }
-    buildLighting() {
-        // Ambient light with warm copper tone
-        const ambient = new THREE.AmbientLight(0xffeedd, 0.65);
+    buildAtmosphere() {
+        // Warm cinematic ambient light
+        const ambient = new THREE.AmbientLight(0xffecd2, 0.75);
         this.scene.add(ambient);
-        // Warm Sun / Clock Face directional backlight
-        const dirLight = new THREE.DirectionalLight(0xffb703, 1.8);
-        dirLight.position.set(0, 25, -20);
+        // Warm Sun / Clock Face directional backlight from deep in the chamber
+        const dirLight = new THREE.DirectionalLight(0xffb703, 2.2);
+        dirLight.position.set(0, 24, -28);
+        dirLight.target.position.set(0, 4, 0);
         dirLight.castShadow = true;
         dirLight.shadow.mapSize.width = 2048;
         dirLight.shadow.mapSize.height = 2048;
-        dirLight.shadow.camera.near = 0.5;
-        dirLight.shadow.camera.far = 80;
-        dirLight.shadow.camera.left = -25;
-        dirLight.shadow.camera.right = 25;
-        dirLight.shadow.camera.top = 25;
-        dirLight.shadow.camera.bottom = -25;
+        dirLight.shadow.camera.near = 1.0;
+        dirLight.shadow.camera.far = 70;
+        dirLight.shadow.camera.left = -30;
+        dirLight.shadow.camera.right = 30;
+        dirLight.shadow.camera.top = 30;
+        dirLight.shadow.camera.bottom = -30;
         this.scene.add(dirLight);
-        // Atmospheric Fog
-        this.scene.fog = new THREE.FogExp2(0x110c08, 0.018);
+        this.scene.add(dirLight.target);
+        // Warm rim fill light from the camera side
+        const frontFill = new THREE.DirectionalLight(0x7090b0, 0.6);
+        frontFill.position.set(0, 10, 15);
+        this.scene.add(frontFill);
+        // Atmospheric warm workshop haze
+        this.scene.fog = new THREE.FogExp2(0x1a120c, 0.015);
     }
-    buildClockworkStage() {
+    buildDustParticles() {
+        const count = 400;
+        const positions = new Float32Array(count * 3);
+        for (let i = 0; i < count; i++) {
+            positions[i * 3] = (Math.random() - 0.5) * 50;
+            positions[i * 3 + 1] = Math.random() * 22;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 45;
+        }
+        this.dustGeo = new THREE.BufferGeometry();
+        this.dustGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const dustMat = new THREE.PointsMaterial({
+            color: 0xffe082,
+            size: 0.18,
+            transparent: true,
+            opacity: 0.7,
+            blending: THREE.AdditiveBlending,
+        });
+        this.dustPoints = new THREE.Points(this.dustGeo, dustMat);
+        this.scene.add(this.dustPoints);
+    }
+    buildGrandClockworkCathedral() {
         const woodTex = TextureFactory.createWoodTexture();
         const brassTex = TextureFactory.createBrassTexture();
-        // 1. Massive Floor Planks
-        const floorGeo = new THREE.BoxGeometry(60, 1.5, 40);
+        // 1. Heavy Workshop Timber Floor
+        const floorGeo = new THREE.BoxGeometry(60, 1.5, 50);
         const floorMat = new THREE.MeshStandardMaterial({
             map: woodTex,
-            roughness: 0.8,
+            roughness: 0.75,
             metalness: 0.1,
         });
         const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -51,140 +80,182 @@ export class World3D {
         floor.receiveShadow = true;
         this.scene.add(floor);
         this.colliders.push(new THREE.Box3().setFromObject(floor));
-        // 2. Giant Backlit Clock Face (Direct from User Reference 3)
-        const clockFaceGeo = new THREE.CylinderGeometry(14, 14, 0.8, 32);
-        const clockFaceMat = new THREE.MeshStandardMaterial({
-            color: 0xffe082,
-            emissive: 0xffaa00,
-            emissiveIntensity: 0.7,
-            roughness: 0.3,
+        // Wooden floor edge trims
+        const trimGeo = new THREE.BoxGeometry(60, 0.6, 1.2);
+        const trimFront = new THREE.Mesh(trimGeo, floorMat);
+        trimFront.position.set(0, 0.3, 24);
+        this.scene.add(trimFront);
+        // 2. Colossal Backlit Clock Face (Direct homage to User Reference 3)
+        const clockGroup = new THREE.Group();
+        clockGroup.position.set(0, 16, -22);
+        const clockRimGeo = new THREE.TorusGeometry(12, 0.9, 16, 48);
+        const clockRimMat = new THREE.MeshStandardMaterial({
+            map: brassTex,
+            metalness: 0.9,
+            roughness: 0.25,
         });
-        const clockFace = new THREE.Mesh(clockFaceGeo, clockFaceMat);
-        clockFace.position.set(0, 18, -18);
-        clockFace.rotation.x = Math.PI / 2;
-        this.scene.add(clockFace);
-        // 3. Rotating Giant Brass Clockwork Gears
-        const gear1 = this.createGear(5.5, 16, brassTex);
-        gear1.position.set(-12, 16, -14);
-        this.scene.add(gear1);
-        this.gears.push({ mesh: gear1, speed: 0.4 });
-        const gear2 = this.createGear(4.0, 12, brassTex);
-        gear2.position.set(12, 14, -13);
-        this.scene.add(gear2);
-        this.gears.push({ mesh: gear2, speed: -0.6 });
-        const gear3 = this.createGear(7.0, 20, brassTex);
-        gear3.position.set(0, 26, -15);
-        this.scene.add(gear3);
-        this.gears.push({ mesh: gear3, speed: 0.25 });
-        // 4. Giant Swinging Pendulum with Lyre Structure (User Reference 3)
+        const clockRim = new THREE.Mesh(clockRimGeo, clockRimMat);
+        clockGroup.add(clockRim);
+        // Glowing warm sun dial face
+        const clockDialGeo = new THREE.CylinderGeometry(11.8, 11.8, 0.4, 32);
+        const clockDialMat = new THREE.MeshStandardMaterial({
+            color: 0xffe57f,
+            emissive: 0xffb300,
+            emissiveIntensity: 0.85,
+            roughness: 0.4,
+        });
+        const clockDial = new THREE.Mesh(clockDialGeo, clockDialMat);
+        clockDial.rotation.x = Math.PI / 2;
+        clockGroup.add(clockDial);
+        // Clock hour indices (Roman numerals radial pattern)
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const notchGeo = new THREE.BoxGeometry(0.5, 2.2, 0.6);
+            const notchMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.5 });
+            const notch = new THREE.Mesh(notchGeo, notchMat);
+            notch.position.set(Math.sin(angle) * 9.5, Math.cos(angle) * 9.5, 0.2);
+            notch.rotation.z = -angle;
+            clockGroup.add(notch);
+        }
+        this.scene.add(clockGroup);
+        // 3. Giant Rotating Interlocking Brass Gears (User Reference 3)
+        const gearCenter = this.createDetailedGear(7.5, 20, brassTex);
+        gearCenter.position.set(0, 26, -18);
+        this.scene.add(gearCenter);
+        this.gears.push({ mesh: gearCenter, speed: 0.2 });
+        const gearLeft = this.createDetailedGear(5.0, 16, brassTex);
+        gearLeft.position.set(-13, 14, -16);
+        this.scene.add(gearLeft);
+        this.gears.push({ mesh: gearLeft, speed: -0.45 });
+        const gearRight = this.createDetailedGear(4.2, 14, brassTex);
+        gearRight.position.set(13, 12, -15);
+        this.scene.add(gearRight);
+        this.gears.push({ mesh: gearRight, speed: 0.55 });
+        const gearFloor = this.createDetailedGear(6.5, 18, brassTex);
+        gearFloor.position.set(-6, 2, -14);
+        this.scene.add(gearFloor);
+        this.gears.push({ mesh: gearFloor, speed: 0.35 });
+        // 4. Giant Swinging Ornate Lyre Pendulum (User Reference 3)
         this.pendulumGroup = new THREE.Group();
-        this.pendulumGroup.position.set(0, 24, -12);
-        const shaftGeo = new THREE.CylinderGeometry(0.2, 0.2, 18, 12);
-        const shaftMat = new THREE.MeshStandardMaterial({ map: brassTex, metalness: 0.8, roughness: 0.3 });
-        const shaft = new THREE.Mesh(shaftGeo, shaftMat);
-        shaft.position.y = -9;
+        this.pendulumGroup.position.set(0, 24, -14);
+        const shaftGeo = new THREE.CylinderGeometry(0.24, 0.24, 20, 12);
+        const shaft = new THREE.Mesh(shaftGeo, clockRimMat);
+        shaft.position.y = -10;
         this.pendulumGroup.add(shaft);
-        const bobGeo = new THREE.CylinderGeometry(3.5, 3.5, 0.8, 24);
-        const bob = new THREE.Mesh(bobGeo, shaftMat);
-        bob.position.y = -17;
-        bob.rotation.x = Math.PI / 2;
-        this.pendulumGroup.add(bob);
+        // Ornate Lyre / Bob Structure
+        const lyreBobGroup = new THREE.Group();
+        lyreBobGroup.position.set(0, -18, 0);
+        const outerRingGeo = new THREE.TorusGeometry(3.6, 0.5, 12, 32);
+        const outerRing = new THREE.Mesh(outerRingGeo, clockRimMat);
+        lyreBobGroup.add(outerRing);
+        // Lyre strings / bars
+        for (let s = -3; s <= 3; s++) {
+            const stringGeo = new THREE.CylinderGeometry(0.06, 0.06, 6.0, 8);
+            const str = new THREE.Mesh(stringGeo, clockRimMat);
+            str.position.set(s * 0.8, 0, 0);
+            lyreBobGroup.add(str);
+        }
+        this.pendulumGroup.add(lyreBobGroup);
         this.scene.add(this.pendulumGroup);
-        // 5. Stepping Bridges & Platforms
-        const bridge1Geo = new THREE.BoxGeometry(10, 0.8, 6);
-        const bridge1 = new THREE.Mesh(bridge1Geo, floorMat);
-        bridge1.position.set(-8, 3.5, -4);
-        bridge1.castShadow = true;
-        bridge1.receiveShadow = true;
-        this.scene.add(bridge1);
-        this.colliders.push(new THREE.Box3().setFromObject(bridge1));
-        const bridge2Geo = new THREE.BoxGeometry(12, 0.8, 6);
-        const bridge2 = new THREE.Mesh(bridge2Geo, floorMat);
-        bridge2.position.set(8, 6.5, -4);
-        bridge2.castShadow = true;
-        bridge2.receiveShadow = true;
-        this.scene.add(bridge2);
-        this.colliders.push(new THREE.Box3().setFromObject(bridge2));
-        // Wooden targets for Cody's Sap & May's Matches
-        this.createTargetWall(new THREE.Vector3(-14, 4.5, -8));
-        this.createTargetWall(new THREE.Vector3(14, 7.5, -8));
+        // 5. Wooden Scaffold Bridges, Railings & Hanging Lanterns
+        const bridgeGeo = new THREE.BoxGeometry(16, 0.8, 5);
+        const bridgeL = new THREE.Mesh(bridgeGeo, floorMat);
+        bridgeL.position.set(-8, 3.5, -6);
+        bridgeL.castShadow = true;
+        bridgeL.receiveShadow = true;
+        this.scene.add(bridgeL);
+        this.colliders.push(new THREE.Box3().setFromObject(bridgeL));
+        const bridgeR = new THREE.Mesh(bridgeGeo, floorMat);
+        bridgeR.position.set(8, 6.2, -8);
+        bridgeR.castShadow = true;
+        bridgeR.receiveShadow = true;
+        this.scene.add(bridgeR);
+        this.colliders.push(new THREE.Box3().setFromObject(bridgeR));
+        // Wooden Crates & Tool Stacks
+        this.createWoodenCrate(new THREE.Vector3(-14, 1.0, -2), 2.0);
+        this.createWoodenCrate(new THREE.Vector3(14, 1.0, -2), 2.0);
+        this.createWoodenCrate(new THREE.Vector3(-12, 4.5, -6), 1.6);
+        this.createWoodenCrate(new THREE.Vector3(12, 7.2, -8), 1.6);
+        // Hanging Lanterns casting local glowing amber pools
+        this.createHangingLantern(new THREE.Vector3(-8, 7.5, -4));
+        this.createHangingLantern(new THREE.Vector3(8, 10.5, -6));
+        // Interactive Target Boards for Cody's Sap & May's Matches
+        this.createTargetBoard(new THREE.Vector3(-16, 5.0, -10));
+        this.createTargetBoard(new THREE.Vector3(16, 8.0, -12));
     }
     buildSapBossArena() {
         const woodTex = TextureFactory.createWoodTexture();
         const brassTex = TextureFactory.createBrassTexture();
         // Cavern Arena Floor
-        const floorGeo = new THREE.CylinderGeometry(26, 26, 1.5, 32);
+        const floorGeo = new THREE.CylinderGeometry(28, 28, 1.5, 36);
         const floorMat = new THREE.MeshStandardMaterial({
             map: woodTex,
-            roughness: 0.85,
+            roughness: 0.8,
         });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.position.set(0, -0.75, 0);
         floor.receiveShadow = true;
         this.scene.add(floor);
         this.colliders.push(new THREE.Box3().setFromObject(floor));
-        // Arena Perimeter Fence / Splintered Wood
-        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 8) {
-            const px = Math.cos(angle) * 23;
-            const pz = Math.sin(angle) * 23;
-            const postGeo = new THREE.BoxGeometry(0.6, 3.5, 0.6);
-            const post = new THREE.Mesh(postGeo, floorMat);
-            post.position.set(px, 1.5, pz);
-            this.scene.add(post);
-            this.colliders.push(new THREE.Box3().setFromObject(post));
+        // Perimeter Timber Barricades
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 10) {
+            const px = Math.cos(a) * 25;
+            const pz = Math.sin(a) * 25;
+            this.createWoodenCrate(new THREE.Vector3(px, 1.2, pz), 2.4);
         }
-        // Target Bulls-eyes around arena
-        this.createTargetWall(new THREE.Vector3(-15, 3, -12));
-        this.createTargetWall(new THREE.Vector3(15, 3, -12));
-        // 3D Boss: The Deranged Toolbox
+        // Targets for Sap Explosion Practice
+        this.createTargetBoard(new THREE.Vector3(-16, 3.5, -12));
+        this.createTargetBoard(new THREE.Vector3(16, 3.5, -12));
+        // Build The Deranged Toolbox 3D Boss
         this.buildBossToolbox(brassTex, woodTex);
     }
     buildBossToolbox(brassTex, woodTex) {
         const bossGroup = new THREE.Group();
-        bossGroup.position.set(0, 0, -14);
-        // Main Heavy Timber Toolbox Body
-        const bodyGeo = new THREE.BoxGeometry(10, 7, 6);
+        bossGroup.position.set(0, 0, -16);
+        // Timber Toolbox Chest
+        const bodyGeo = new THREE.BoxGeometry(12, 8, 7);
         const bodyMat = new THREE.MeshStandardMaterial({
             map: woodTex,
-            color: 0x803a18,
-            roughness: 0.7,
+            color: 0x7a3818,
+            roughness: 0.65,
             metalness: 0.2,
         });
         const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-        bodyMesh.position.y = 3.5;
+        bodyMesh.position.y = 4.0;
         bodyMesh.castShadow = true;
         bossGroup.add(bodyMesh);
-        // Brass Corner Plates & Hinges
-        const hingeGeo = new THREE.BoxGeometry(10.4, 0.6, 6.4);
-        const hingeMat = new THREE.MeshStandardMaterial({ map: brassTex, metalness: 0.8, roughness: 0.3 });
-        const hinge = new THREE.Mesh(hingeGeo, hingeMat);
-        hinge.position.y = 5.5;
-        bossGroup.add(hinge);
-        // Menacing Glowing Red Eyes
-        const eyeGeo = new THREE.BoxGeometry(1.6, 0.8, 0.3);
+        // Brass Hinges and Corner Brackets
+        const bracketGeo = new THREE.BoxGeometry(12.4, 0.8, 7.4);
+        const brassMat = new THREE.MeshStandardMaterial({ map: brassTex, metalness: 0.85, roughness: 0.25 });
+        const bracket = new THREE.Mesh(bracketGeo, brassMat);
+        bracket.position.y = 6.5;
+        bossGroup.add(bracket);
+        // Menacing Glowing Eyes
+        const eyeGeo = new THREE.BoxGeometry(1.8, 0.9, 0.4);
         const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0044 });
         const eyeLeft = new THREE.Mesh(eyeGeo, eyeMat);
-        eyeLeft.position.set(-2.2, 4.2, 3.05);
+        eyeLeft.position.set(-2.6, 5.0, 3.6);
         const eyeRight = new THREE.Mesh(eyeGeo, eyeMat);
-        eyeRight.position.set(2.2, 4.2, 3.05);
+        eyeRight.position.set(2.6, 5.0, 3.6);
         bossGroup.add(eyeLeft, eyeRight);
-        // Articulated Wooden Slamming Fist / Arm
+        // Articulated Wooden Slamming Fist / Hydraulic Arm
         const slammingArm = new THREE.Group();
-        slammingArm.position.set(0, 6, 4);
-        const armSegmentGeo = new THREE.BoxGeometry(2.5, 2.5, 9);
-        const armSegment = new THREE.Mesh(armSegmentGeo, bodyMat);
-        armSegment.position.z = 4.5;
-        armSegment.castShadow = true;
-        slammingArm.add(armSegment);
-        // Glowing Power Module on Arm (Target for May & Cody!)
-        const moduleGeo = new THREE.CylinderGeometry(1.0, 1.0, 0.6, 16);
+        slammingArm.position.set(0, 7, 4.5);
+        const armGeo = new THREE.BoxGeometry(3.0, 3.0, 11);
+        const armMesh = new THREE.Mesh(armGeo, bodyMat);
+        armMesh.position.z = 5.5;
+        armMesh.castShadow = true;
+        slammingArm.add(armMesh);
+        // Glowing Power Module Target on Fist (Where Sap + Match must hit!)
+        const moduleGeo = new THREE.CylinderGeometry(1.2, 1.2, 0.8, 16);
         const moduleMat = new THREE.MeshStandardMaterial({
             color: 0x00f5d4,
             emissive: 0x00f5d4,
-            emissiveIntensity: 0.9,
+            emissiveIntensity: 1.0,
+            roughness: 0.2,
         });
         const armTargetModule = new THREE.Mesh(moduleGeo, moduleMat);
-        armTargetModule.position.set(0, 1.4, 6.5);
+        armTargetModule.position.set(0, 1.8, 8.0);
         slammingArm.add(armTargetModule);
         bossGroup.add(slammingArm);
         this.scene.add(bossGroup);
@@ -203,79 +274,126 @@ export class World3D {
             moduleCollider: new THREE.Box3().setFromObject(armTargetModule),
         };
     }
-    createGear(radius, teethCount, brassTex) {
+    createDetailedGear(radius, teeth, brassTex) {
         const gear = new THREE.Group();
-        // Central disc
-        const discGeo = new THREE.CylinderGeometry(radius, radius, 0.6, 32);
         const mat = new THREE.MeshStandardMaterial({
             map: brassTex,
-            metalness: 0.85,
+            metalness: 0.9,
             roughness: 0.25,
         });
+        // Central disc
+        const discGeo = new THREE.CylinderGeometry(radius, radius, 0.7, 32);
         const disc = new THREE.Mesh(discGeo, mat);
         disc.rotation.x = Math.PI / 2;
         disc.castShadow = true;
         gear.add(disc);
-        // Teeth
-        const toothGeo = new THREE.BoxGeometry(0.8, 1.2, 0.6);
-        for (let i = 0; i < teethCount; i++) {
-            const angle = (i / teethCount) * Math.PI * 2;
+        // Hub center boss
+        const hubGeo = new THREE.CylinderGeometry(radius * 0.35, radius * 0.35, 1.1, 16);
+        const hub = new THREE.Mesh(hubGeo, mat);
+        hub.rotation.x = Math.PI / 2;
+        gear.add(hub);
+        // Extruded mechanical teeth
+        const toothGeo = new THREE.BoxGeometry(0.9, 1.4, 0.7);
+        for (let i = 0; i < teeth; i++) {
+            const angle = (i / teeth) * Math.PI * 2;
             const tooth = new THREE.Mesh(toothGeo, mat);
-            tooth.position.set(Math.cos(angle) * (radius + 0.4), Math.sin(angle) * (radius + 0.4), 0);
+            tooth.position.set(Math.cos(angle) * (radius + 0.5), Math.sin(angle) * (radius + 0.5), 0);
             tooth.rotation.z = angle;
+            tooth.castShadow = true;
             gear.add(tooth);
         }
         return gear;
     }
-    createTargetWall(pos) {
+    createWoodenCrate(pos, size) {
+        const woodTex = TextureFactory.createWoodTexture();
+        const crateGeo = new THREE.BoxGeometry(size, size, size);
+        const crateMat = new THREE.MeshStandardMaterial({
+            map: woodTex,
+            roughness: 0.7,
+        });
+        const crate = new THREE.Mesh(crateGeo, crateMat);
+        crate.position.copy(pos);
+        crate.castShadow = true;
+        crate.receiveShadow = true;
+        this.scene.add(crate);
+        this.colliders.push(new THREE.Box3().setFromObject(crate));
+    }
+    createHangingLantern(pos) {
+        const chainGeo = new THREE.CylinderGeometry(0.04, 0.04, 3.5, 6);
+        const metalMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8 });
+        const chain = new THREE.Mesh(chainGeo, metalMat);
+        chain.position.set(pos.x, pos.y + 1.75, pos.z);
+        this.scene.add(chain);
+        const lanternGeo = new THREE.CylinderGeometry(0.35, 0.45, 0.8, 8);
+        const lanternMat = new THREE.MeshStandardMaterial({
+            color: 0xffaa00,
+            emissive: 0xff8800,
+            emissiveIntensity: 0.9,
+        });
+        const lantern = new THREE.Mesh(lanternGeo, lanternMat);
+        lantern.position.copy(pos);
+        this.scene.add(lantern);
+        const light = new THREE.PointLight(0xffaa22, 2.5, 14);
+        light.position.copy(pos);
+        this.scene.add(light);
+    }
+    createTargetBoard(pos) {
         const targetGroup = new THREE.Group();
         targetGroup.position.copy(pos);
-        const boardGeo = new THREE.CylinderGeometry(2.5, 2.5, 0.4, 24);
-        const boardMat = new THREE.MeshStandardMaterial({
-            color: 0xcc8833,
-            roughness: 0.8,
-        });
+        const woodTex = TextureFactory.createWoodTexture();
+        const boardGeo = new THREE.CylinderGeometry(2.6, 2.6, 0.4, 24);
+        const boardMat = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.7 });
         const board = new THREE.Mesh(boardGeo, boardMat);
         board.rotation.x = Math.PI / 2;
         targetGroup.add(board);
         // Bullseye Ring
-        const ringGeo = new THREE.TorusGeometry(1.4, 0.2, 8, 24);
-        const ringMat = new THREE.MeshStandardMaterial({ color: 0xff0044, roughness: 0.5 });
+        const ringGeo = new THREE.TorusGeometry(1.5, 0.22, 8, 24);
+        const ringMat = new THREE.MeshStandardMaterial({ color: 0xff0044, roughness: 0.4 });
         const ring = new THREE.Mesh(ringGeo, ringMat);
         targetGroup.add(ring);
         this.scene.add(targetGroup);
         this.colliders.push(new THREE.Box3().setFromObject(targetGroup));
     }
     update(dt, time) {
-        // 1. Rotate clockwork gears
+        // 1. Rotate gears
         for (const g of this.gears) {
             g.mesh.rotation.z += g.speed * dt;
         }
         // 2. Swing pendulum
         if (this.pendulumGroup) {
-            this.pendulumGroup.rotation.z = Math.sin(time * 1.8) * 0.45;
+            this.pendulumGroup.rotation.z = Math.sin(time * 1.6) * 0.42;
         }
-        // 3. Update Boss Animation
+        // 3. Float dust particles
+        if (this.dustGeo) {
+            const pos = this.dustGeo.attributes.position.array;
+            for (let i = 0; i < pos.length / 3; i++) {
+                pos[i * 3 + 1] -= 0.6 * dt;
+                if (pos[i * 3 + 1] < 0)
+                    pos[i * 3 + 1] = 22;
+            }
+            this.dustGeo.attributes.position.needsUpdate = true;
+        }
+        // 4. Update Boss state
         if (this.boss && this.boss.hp > 0) {
             this.boss.armTimer -= dt;
             const { slammingArm } = this.boss;
             switch (this.boss.armState) {
                 case 'idle':
-                    slammingArm.rotation.x = Math.sin(time * 2.0) * 0.1;
+                    slammingArm.rotation.x = Math.sin(time * 2.0) * 0.08;
                     if (this.boss.armTimer <= 0) {
                         this.boss.armState = 'raising';
                         this.boss.armTimer = 1.0;
                     }
                     break;
                 case 'raising':
-                    slammingArm.rotation.x += 1.6 * dt;
+                    slammingArm.rotation.x += 1.8 * dt;
                     if (this.boss.armTimer <= 0) {
                         this.boss.armState = 'slamming';
                         this.boss.armTimer = 0.3;
                     }
                     break;
                 case 'slamming':
-                    slammingArm.rotation.x -= 5.0 * dt;
+                    slammingArm.rotation.x -= 6.0 * dt;
                     if (slammingArm.rotation.x <= -0.5 || this.boss.armTimer <= 0) {
                         slammingArm.rotation.x = -0.5;
                         this.boss.armState = 'recovering';
@@ -283,7 +401,7 @@ export class World3D {
                     }
                     break;
                 case 'recovering':
-                    slammingArm.rotation.x += (0 - slammingArm.rotation.x) * 2.5 * dt;
+                    slammingArm.rotation.x += (0 - slammingArm.rotation.x) * 2.8 * dt;
                     if (this.boss.armTimer <= 0) {
                         this.boss.armState = 'idle';
                         this.boss.armTimer = 2.0;

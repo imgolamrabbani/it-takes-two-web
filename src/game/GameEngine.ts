@@ -60,9 +60,24 @@ export class GameEngine {
       },
     });
 
+    // Toggle Camera View with V key
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyV') {
+        const isSplit = this.renderer.toggleViewMode();
+        const divider = document.getElementById('split-divider');
+        if (divider) divider.style.display = isSplit ? 'block' : 'none';
+        const mayHud = document.getElementById('may-hud');
+        const codyHud = document.getElementById('cody-hud');
+        if (mayHud && codyHud) {
+          mayHud.style.display = isSplit ? 'block' : 'none';
+          codyHud.style.display = isSplit ? 'block' : 'none';
+        }
+      }
+    });
+
     this.initStage(1);
 
-    // Inject automated hook for AGENT_PLAYER_UX playtest audit
+    // Automated hook for QA playtesting
     if (typeof window !== 'undefined') {
       (window as unknown as { __GAME_DEBUG__: unknown }).__GAME_DEBUG__ = {
         getState: () => ({
@@ -94,7 +109,6 @@ export class GameEngine {
   }
 
   private initStage(stage: number): void {
-    // Clear old scene
     while (this.scene.children.length > 0) {
       this.scene.remove(this.scene.children[0]);
     }
@@ -103,9 +117,9 @@ export class GameEngine {
     this.world = new World3D(this.scene, stage);
     this.weapons = new Weapons3D(this.scene);
 
-    // Spawn Cody & May in 3D
-    this.may = new Character3D('may', new THREE.Vector3(-4, 0, 0));
-    this.cody = new Character3D('cody', new THREE.Vector3(4, 0, 0));
+    // Spawn May on left (-6) and Cody on right (+6), facing -Z (into the level)
+    this.may = new Character3D('may', new THREE.Vector3(-6, 0, 0));
+    this.cody = new Character3D('cody', new THREE.Vector3(6, 0, 0));
 
     this.scene.add(this.may.group);
     this.scene.add(this.cody.group);
@@ -135,7 +149,6 @@ export class GameEngine {
     this.lastTime = now;
     const delta = Math.min(rawDelta, 0.1);
 
-    // FPS calculation
     this.frameCount++;
     this.fpsTimer += delta;
     if (this.fpsTimer >= 0.5) {
@@ -144,7 +157,6 @@ export class GameEngine {
       this.fpsTimer = 0;
     }
 
-    // Toggle Debug / Pause
     if (this.input.isDebugToggled()) {
       this.showDebug = !this.showDebug;
     }
@@ -163,7 +175,7 @@ export class GameEngine {
       this.updateGame(delta, now / 1000);
     }
 
-    // Render 3D Split-Screen
+    // Render Split-Screen Viewports
     this.renderer.render(this.scene, this.may, this.cody, delta);
 
     this.input.endFrame();
@@ -173,9 +185,9 @@ export class GameEngine {
   private updateGame(dt: number, time: number): void {
     const inputs = this.input.getPlayerInputs();
 
-    // 1. Update Cody Movement & Sap Cannon
+    // 1. Cody Controls (WASD)
     const codySpeed = 9.5;
-    const codyMoveDir = new THREE.Vector3(inputs.cody.moveX, 0, -inputs.cody.moveY);
+    const codyMoveDir = new THREE.Vector3(inputs.cody.moveX, 0, inputs.cody.moveY);
     if (codyMoveDir.lengthSq() > 0.05) {
       codyMoveDir.normalize();
       this.cody.pos.addScaledVector(codyMoveDir, codySpeed * dt);
@@ -199,16 +211,16 @@ export class GameEngine {
     }
     this.cody.updateAnimation(dt);
 
-    // Cody Fire Sap
+    // Cody Fire Sap (F key)
     if (inputs.cody.action1Pressed) {
-      const dir = new THREE.Vector3(Math.sin(this.cody.facingAngle), 0.15, Math.cos(this.cody.facingAngle));
-      this.weapons.fireSap(this.cody.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), dir);
+      const shootDir = new THREE.Vector3(Math.sin(this.cody.facingAngle), 0.15, Math.cos(this.cody.facingAngle));
+      this.weapons.fireSap(this.cody.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), shootDir);
       this.audio.sfxNailThrow();
     }
 
-    // 2. Update May Movement & Match Rifle
+    // 2. May Controls (Arrow Keys)
     const maySpeed = 9.5;
-    const mayMoveDir = new THREE.Vector3(inputs.may.moveX, 0, -inputs.may.moveY);
+    const mayMoveDir = new THREE.Vector3(inputs.may.moveX, 0, inputs.may.moveY);
     if (mayMoveDir.lengthSq() > 0.05) {
       mayMoveDir.normalize();
       this.may.pos.addScaledVector(mayMoveDir, maySpeed * dt);
@@ -232,29 +244,32 @@ export class GameEngine {
     }
     this.may.updateAnimation(dt);
 
-    // May Fire Match Rifle
+    // May Fire Match Rifle (L or M key)
     if (inputs.may.action1Pressed) {
-      const dir = new THREE.Vector3(Math.sin(this.may.facingAngle), 0, Math.cos(this.may.facingAngle));
-      this.weapons.fireMatch(this.may.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), dir);
+      const shootDir = new THREE.Vector3(Math.sin(this.may.facingAngle), 0, Math.cos(this.may.facingAngle));
+      this.weapons.fireMatch(this.may.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), shootDir);
       this.audio.sfxHammerSwing();
     }
 
     // 3. Update 3D World (gears, pendulum, boss)
     this.world.update(dt, time);
 
-    // 4. Update Weapons, Projectiles & Explosions
+    // 4. Update Weapons, Projectiles & Chain Reaction Explosions
     const { detonatedCount } = this.weapons.update(dt, this.world.colliders);
     if (detonatedCount > 0) {
       this.audio.sfxHammerSmash();
       this.renderer.addTrauma(0.55);
 
-      // Check if explosion damaged the Boss!
       if (this.world.boss && this.world.boss.hp > 0) {
         for (const exp of this.weapons.explosions) {
-          if (exp.pos.distanceTo(this.world.boss.armTargetModule.position.clone().add(this.world.boss.slammingArm.position).add(this.world.boss.group.position)) < 5.0) {
+          const bossModulePos = this.world.boss.armTargetModule.position.clone()
+            .add(this.world.boss.slammingArm.position)
+            .add(this.world.boss.group.position);
+
+          if (exp.pos.distanceTo(bossModulePos) < 5.5) {
             this.world.boss.hp -= 34;
             this.audio.sfxBossHit();
-            this.renderer.addTrauma(0.7);
+            this.renderer.addTrauma(0.75);
 
             if (this.world.boss.hp <= 0) {
               this.state = 'VICTORY';
